@@ -1,0 +1,135 @@
+---
+title: "Network Data Introduction"
+author: "Mark Hoffman"
+output: html_document
+---
+
+Underlying every network visualization is data about relationships. These relationships can be observed or simulated (that is, hypothetical). When analyzing a set of relationships, we will generally use one of two different data structures: edge lists or adjacency matrices.
+
+# Edge lists
+
+One simple way to represent a graph is to list the edges, which we will refer to as an edge list. For each edge, we just list who that edge is incident on. Edge lists are therefore two column matrices that directly tell the computer which actors are tied for each edge. In a directed graph, the actors in column A are the sources of edges, and the actors in Column B recieve the tie. In an undirected graph, order doesn't matter.
+
+In R, we can create an example edge list using vectors and data.frames.  I specify each column of the edge list with vectors and then assign them as the columns of a data.frame. We can use this to visualize what an edge list should look like. 
+
+```{r}
+personA <- c("Mark", "Mark", "Peter", "Peter", "Bob", "Jill")
+personB <- c("Peter", "Jill", "Bob", "Aaron", "Jill", "Aaron")
+
+edgelist <- data.frame(PersonA = personA, PersonB = personB, stringsAsFactors = F)
+
+print(edgelist)
+```
+
+What are the upsides of using the edge list format? As you can see, in an edge list, the number of rows accords to the number of edges in the network since each row details the actors in a specific tie. It is therefore really simple format for _recording_ network data in an excel file or csv file. 
+
+What are the downsides? The first is practical - it is impossible to represent isolates using an edge list since it details relations. There are ways to get around this problem in R, however. The second is technical - edge lists are not suitable for data formats for performing linear algebraic techniques. As a result, we will almost always convert and edge list into either an adjacency matrix, or into a network object. 
+
+# Adjacency matrices
+
+Adjacency matrices have one row and one column for each actor in the network.  The elements of the matrix can be any number but in most networks, will be either 0 or 1. A matrix element of 1 (or greater) signals that the respective column actor and row actor should be tied in the network. Zero signals that they are not tied. 
+
+We can use what we learned in the last tutorial to create such a matrix. An example might look like this:
+```{r}
+adjacency <- matrix(c(0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0,1,0), nrow = 5, ncol = 5, dimnames = list(c("Mark", "Peter", "Bob", "Jill", "Aaron"), c("Mark", "Peter", "Bob", "Jill", "Aaron")))
+
+print(adjacency)
+```
+
+What are the upsides of using the adjacency matrix format? Adjacency matrices are the most fundamental network analysis data format.  They undergird all of the analytical techniques we will show you later on. They are also much more efficient than edge lists. For example, imagine searching for whether Peter and Jill are friends in an adjacency matrix as opposed to an edge list.  In the adjacency matrix, we would go to Peter's row and Jill's column and we would find either a 1 or a 0, giving us our answer. In an edge list, we would have to search through each edge, which might seem simple in a dataset with only 5 people, but as the edge list grows, it will scale linearly with the number of edges.
+
+What are the downsides? It is really difficult to record network data with an adjacency matrix. They are better suited for computers than people.  
+
+# Loading Data into R
+
+Any empirical network project will have a basic workflow, which includes collecting and recording network data, loading that network data into R, and analyzing the network data using a network analysis package.  The ease of collecting and recording network will depend on the scale of the project.  Sometimes, when the number of actors in your study is small, it can be done by hand.  We recommend using excel to record the edge list, saving the edge list as a .csv file and loading it into R using the read.csv() function.  When the number of actors is very large, you will often be using some computer program (such as Python, Java or R) to actually collect the data.  In this case, the data will already be saved in some type of file (mySQL, csv, Hadoop, etc.) which can be loaded directly into R.
+
+In this class, for ease of exposition, we will primarily work with .csv files. As I just mentioned, read.csv is a function which reads a csv file... pretty self-explanatory! read.csv has many arguments, but the only one that is truly necessary is the file extension. I also set stringsAsFactors to FALSE, since we won't be using factors when analyzing network data. 
+
+You  have to specify exactly where the file is on your computer. In Mac that looks like:
+```{r}
+countrysideEL <- read.csv(file = "Data/countrysideEL.csv", stringsAsFactors = FALSE)
+```
+
+You can also use a file browser to locate the file and click on it to load it in. file.choose() allows you to search inside your computers files for the csv file you want to upload.
+
+```{r}
+# countrysideEL <- read.csv(file = file.choose(), stringsAsFactors = FALSE)
+```
+
+What just happened here?  I assigned the result of a function (file.choose(), which finds a csv in my computer) to an object. Now the data from that csv file is stored in R!
+
+> **A little about objects in R:**
+> The name of an object must start with a letter (A-Z or a-z).  It can contain letters, digits (0-9), and periods"." Finally, R is case-sensitive, so classedge and classEdge are different objects; not paying attention to case is the most common mistake.
+
+Now let's look at the result and compare it to the data in the actual file using Notepad. View() has the same effect as clicking on the data in the "Environment" window in RStudio.
+
+```{r}
+head(countrysideEL)
+```
+
+It looks great! 
+
+# Creating Network (igraph) Objects
+
+In this class, we will be primarily using igraph, a user-maintained package in R, to analyze networks. Installing and loading igraph gives us a bunch of tools for graphing, analyzing and manipulating networks. However, to provide this flexibility, igraph uses an object class that we have yet to encounter called: "igraph". We therefore have to convert our edge list into an igraph object. 
+
+The first step is always to load in the igraph package. 
+
+```{r}
+library(igraph)
+```
+
+igraph only takes matrices, so we then have to convert our data.frame (the default class of objects returned by read.csv()) to a matrix. We learned how to do this earlier in the tutorial.
+
+```{r}
+countrysideEL <- as.matrix(countrysideEL)
+```
+
+We can now turn the countrysideEL edge list into a network object. The required function is graph.edgelist() and it takes two arguments, the network data (an edge list) and whether the edges are directed or undirected.  
+
+```{r}
+countrysideNetwork <- graph.edgelist(countrysideEL, directed=TRUE)
+```
+> **A Note on Function Documentation**
+> If you want to see more about graph.edgelist() or if you want to see other ways to graph data type, you can type ?graph.edgelist. Entering ? before any function will cause R to bring up documentation on that function. 
+
+To graph an adjacency matrix we follow similar steps, except we use the graph.adjacency() function as opposed to the graph.edgelist() function.
+
+```{r}
+countrysideAdj <- read.csv("Data/countrysideAdj.csv", header = F)
+colnames(countrysideAdj) <- rownames(countrysideAdj)
+```
+
+We again convert it into a matrix and finally an "igraph" object, this time using the graph.adjacency() function.
+
+```{r}
+countrysideAdj <- as.matrix(countrysideAdj)
+countrysideNetwork <- graph.adjacency(countrysideAdj, mode = "directed")
+```
+
+# Our first network
+
+We finally have a network in R! So.. what next? Well we can find summary of it just by typing its name into R.
+
+```{r}
+countrysideNetwork
+```
+
+The first line - which reads IGRAPH DN-- 1147 6189 -- - tells us that it is an igraph object which is a directed network (DN), with 1147 nodes and 6189 edges.
+
+The next line tells us some attributes of the nodes and edges network.  At the moment, it only has the attribute "name"  for the vertices (v/c). We can look at the values of the "name" attribute with the V()$ function. We add [1:5] at the end so that it only returns the first five values.
+
+```{r}
+V(countrysideNetwork)$name[1:5]
+```
+
+Finally, the last part gives us a snapshot of the edges in the network, most of which are omitted.  
+
+We can visualize the network using the plot() function.
+
+```{r}
+plot(countrysideNetwork)
+```
+
+The default visualization is pretty ugly... In the next section, we will learn how to improve our visualizations so that they can be useful as qualitative evidence in network analysis.
