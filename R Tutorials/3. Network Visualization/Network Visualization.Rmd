@@ -100,7 +100,7 @@ The ifelse function is useful for this purpose. The basic structure is: if somet
 V(countrysideNetwork)$nonwhite <- ifelse(V(countrysideNetwork)$race == 2 | V(countrysideNetwork)$race == 3, 1, 0)
 ```
 
-Alternatively we could perform some mathematical observations on the variable values. 
+Alternatively we could perform some mathematical transformations on the variable values. 
 
 ```{r}
 V(countrysideNetwork)$grade2 <- V(countrysideNetwork)$grade2^2
